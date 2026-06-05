@@ -1,0 +1,111 @@
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+
+.checkout-page { background: #0a0a2e; min-height: 100vh; color: white; }
+
+.header { background: rgba(255,255,255,0.05); padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.header-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 22px; font-weight: bold; color: #ff6b00; }
+.back-btn { background: transparent; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+
+.checkout-container {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 40px;
+  align-items: start;
+}
+
+.checkout-form { display: flex; flex-direction: column; gap: 20px; }
+.checkout-form h2 { font-size: 22px; color: #ff6b00; margin-bottom: 4px; }
+
+.checkout-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+}
+
+.checkout-form input {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 15px;
+  text-align: right;
+}
+
+.payment-section { background: rgba(255,255,255,0.05); border-radius: 14px; padding: 20px; }
+.payment-section h3 { font-size: 16px; margin-bottom: 14px; color: #ff6b00; }
+.payment-methods { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.payment-method { background: rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 8px; font-size: 14px; }
+.payment-note { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 14px; }
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255,107,0,0.15);
+  border: 2px dashed #ff6b00;
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 15px;
+}
+
+.upload-label input { display: none; }
+.file-name { font-size: 13px; color: #4caf50; margin-top: 8px; }
+
+.order-summary {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  position: sticky;
+  top: 20px;
+}
+
+.order-summary h2 { font-size: 18px; color: #ff6b00; margin-bottom: 20px; }
+
+.summary-product {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.summary-product img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
+.summary-product p { font-size: 14px; margin-bottom: 4px; }
+.summary-product span { color: #ff6b00; font-size: 15px; font-weight: bold; }
+
+.summary-line { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: rgba(255,255,255,0.7); }
+.summary-line.total { font-size: 18px; font-weight: bold; color: white; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
+
+.confirm-btn {
+  width: 100%;
+  background: #ff6b00;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.confirm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.success-page { background: #0a0a2e; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.success-box { background: rgba(255,255,255,0.06); border-radius: 20px; padding: 40px; text-align: center; max-width: 400px; color: white; }
+.success-icon { font-size: 60px; margin-bottom: 20px; }
+.success-box h2 { font-size: 24px; margin-bottom: 12px; }
+.success-box p { color: rgba(255,255,255,0.7); margin-bottom: 8px; font-size: 15px; }
+.success-box button { background: #ff6b00; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-size: 15px; cursor: pointer; margin-top: 16px; width: 100%; font-weight: bold; }
+.success-box .home-btn { background: rgba(255,255,255,0.1); margin-top: 10px; }
+.loading-page { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 24px; color: white; background: #0a0a2e; }

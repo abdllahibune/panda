@@ -1,0 +1,38 @@
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+
+.track-page { background: #0a0a2e; min-height: 100vh; color: white; }
+
+.header { background: rgba(255,255,255,0.05); padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.header-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 22px; font-weight: bold; color: #ff6b00; }
+.back-btn { background: transparent; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+
+.track-container { max-width: 700px; margin: 40px auto; padding: 0 24px; text-align: center; }
+.track-container h1 { font-size: 32px; margin-bottom: 10px; }
+.track-container > p { color: rgba(255,255,255,0.6); margin-bottom: 30px; }
+
+.search-box { display: flex; gap: 0; background: white; border-radius: 50px; overflow: hidden; padding: 6px 6px 6px 20px; margin-bottom: 40px; }
+.search-box input { flex: 1; border: none; outline: none; font-size: 15px; color: #333; text-align: right; background: transparent; }
+.search-box button { background: #ff6b00; color: white; border: none; padding: 12px 28px; border-radius: 50px; font-size: 15px; cursor: pointer; font-weight: bold; }
+
+.no-orders { color: rgba(255,255,255,0.5); font-size: 18px; margin-top: 20px; }
+
+.order-track-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; margin-bottom: 20px; text-align: right; }
+
+.order-track-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; color: rgba(255,255,255,0.5); }
+.order-track-name { font-size: 17px; font-weight: bold; margin-bottom: 6px; }
+.order-track-price { color: #ff6b00; font-size: 16px; margin-bottom: 24px; }
+
+.progress-bar { display: flex; align-items: flex-start; justify-content: space-between; position: relative; }
+
+.progress-step { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; position: relative; }
+
+.step-circle { font-size: 24px; width: 48px; height: 48px; background: rgba(255,255,255,0.08); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.2); }
+
+.progress-step.active .step-circle { background: rgba(255,107,0,0.2); border-color: #ff6b00; }
+
+.progress-step span { font-size: 12px; color: rgba(255,255,255,0.6); text-align: center; }
+.progress-step.active span { color: #ff6b00; font-weight: bold; }
+
+.step-line { position: absolute; top: 24px; left: -50%; width: 100%; height: 2px; background: rgba(255,255,255,0.1); z-index: 0; }
+.step-line.done { background: #ff6b00; }
