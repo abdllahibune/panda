@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import './admin.css'
+const RAPIDAPI_KEY = 'e69ad28a7dmsh028e4d8f9c683e3p1e2692jsnca2e6e385579'
+
+async function fetchFromAliexpress(keyword) {
+  const url = `https://aliexpress-datahub.p.rapidapi.com/item_search_3?q=${encodeURIComponent(keyword)}&page=1`
+  const res = await fetch(url, {
+    headers: {
+      'x-rapidapi-host': 'aliexpress-datahub.p.rapidapi.com',
+      'x-rapidapi-key': RAPIDAPI_KEY
+    }
+  })
+  const data = await res.json()
+  return data?.result?.resultList || []
+}
 
 function Admin() {
   const [page, setPage] = useState('orders')
@@ -62,6 +75,48 @@ function Admin() {
     await supabase.from('settings').update(settings).eq('id', 1)
     alert('تم حفظ الإعدادات ✅')
   }
+  // AliExpress Scraper
+  const [scraperQuery, setScraperQuery] = useState('')
+  const [scraperResults, setScraperResults] = useState([])
+  const [scraperLoading, setScraperLoading] = useState(false)
+  const [importing, setImporting] = useState({})
+
+  async function searchAliexpress() {
+    if (!scraperQuery) return alert('اكتب كلمة بحث')
+    setScraperLoading(true)
+    setScraperResults([])
+    try {
+      const url = `https://aliexpress-datahub.p.rapidapi.com/item_search_3?q=${encodeURIComponent(scraperQuery)}&page=1`
+      const res = await fetch(url, {
+        headers: {
+          'x-rapidapi-host': 'aliexpress-datahub.p.rapidapi.com',
+          'x-rapidapi-key': RAPIDAPI_KEY
+        }
+      })
+      const data = await res.json()
+      const items = data?.result?.resultList || []
+      setScraperResults(items)
+    } catch(e) {
+      alert('خطأ في الاتصال')
+    }
+    setScraperLoading(false)
+  }
+
+  async function importProduct(item) {
+    const id = item.item?.itemId
+    setImporting(p => ({...p, [id]: true}))
+    const name = item.item?.title || 'منتج'
+    const image = item.item?.image || ''
+    const price_usd = parseFloat(item.item?.sku?.def?.promotionPrice || item.item?.sku?.def?.price || 0)
+    const usdRate = settings?.usd_to_mqr || 370
+    const price_mqr = Math.round(price_usd * usdRate * 1.3)
+    await supabase.from('products').insert({
+      name, image_url: image, price_usd, price_mqr,
+      description: '', category: 'عام', is_active: true
+    })
+    setImporting(p => ({...p, [id]: false}))
+    alert('تم إضافة المنتج')
+  }
 
   const statusLabels = {
     pending: '🟡 مدفوع',
@@ -78,6 +133,7 @@ function Admin() {
           <button className={page === 'orders' ? 'active' : ''} onClick={() => setPage('orders')}>📦 الطلبات</button>
           <button className={page === 'products' ? 'active' : ''} onClick={() => setPage('products')}>🛍️ المنتجات</button>
           <button className={page === 'settings' ? 'active' : ''} onClick={() => setPage('settings')}>⚙️ الإعدادات</button>
+          <button className={page === 'scraper' ? 'active' : ''} onClick={() => setPage('scraper')}>استيراد</button>
         </nav>
       </header>
 
@@ -163,6 +219,51 @@ function Admin() {
             <button className="save-btn" onClick={saveSettings}>💾 حفظ الإعدادات</button>
           </div>
         )}
+
+        {page === 'scraper' &&
+          <div style={{padding:'20px'}}>
+            <h2 style={{marginBottom:'16px'}}>استيراد منتجات من AliExpress</h2>
+            <div style={{display:'flex', gap:'10px', marginBottom:'20px'}}>
+              <input
+                style={{flex:1, padding:'10px', borderRadius:'8px', border:'1px solid #ddd', fontSize:'14px', textAlign:'right'}}
+                placeholder="ابحث... مثال: shoes, watch, bag"
+                value={scraperQuery}
+                onChange={e => setScraperQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && searchAliexpress()}
+              />
+              <button
+                style={{background:'#ff6900', color:'white', border:'none', padding:'10px 20px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold'}}
+                onClick={searchAliexpress}
+              >
+                {scraperLoading ? '...' : 'بحث'}
+              </button>
+            </div>
+            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:'12px'}}>
+              {scraperResults.map(item => {
+                const id = item.item?.itemId
+                const name = item.item?.title || 'منتج'
+                const image = item.item?.image || ''
+                const price = item.item?.sku?.def?.promotionPrice || item.item?.sku?.def?.price || '0'
+                return (
+                  <div key={id} style={{background:'white', borderRadius:'8px', border:'1px solid #eee', overflow:'hidden'}}>
+                    <img src={image} alt={name} style={{width:'100%', aspectRatio:'1', objectFit:'cover'}} />
+                    <div style={{padding:'8px'}}>
+                      <p style={{fontSize:'12px', color:'#333', marginBottom:'6px', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden'}}>{name}</p>
+                      <p style={{fontSize:'14px', fontWeight:'900', color:'#ff6900', marginBottom:'8px'}}>${price}</p>
+                      <button
+                        style={{width:'100%', background: importing[id] ? '#ccc' : '#ff6900', color:'white', border:'none', padding:'7px', borderRadius:'5px', cursor:'pointer', fontSize:'12px', fontWeight:'bold'}}
+                        onClick={() => importProduct(item)}
+                        disabled={importing[id]}
+                      >
+                        {importing[id] ? 'جاري...' : 'اضف للموقع'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        }
 
       </main>
     </div>

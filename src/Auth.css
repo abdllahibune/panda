@@ -91,3 +91,27 @@
   cursor: pointer;
   width: 100%;
 }
+/* DARK MODE */
+.dark { background: #0a0a0a; color: white; }
+.dark .header { background: #111; border-color: #222; }
+.dark .hero-banner { background: #111; }
+.dark .categories { background: #111; }
+.dark .section { background: #111; }
+.dark .product-card { background: #1a1a1a; border-color: #222; }
+.dark .product-name { color: white; }
+.dark .cat-item:hover { background: #1a3a1a; }
+.dark .cat-icon { background: #1a3a1a; }
+.dark .section-title { color: white; }
+.dark .bottom-nav { background: #111; border-color: #222; }
+.dark .nav a { color: rgba(255,255,255,0.8); }
+.dark .search-bar { background: #222; }
+.dark .search-bar input { color: white; }
+
+.theme-toggle {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}

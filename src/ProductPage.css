@@ -1,115 +1,86 @@
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+@import './global.css';
 
-.product-page { background: #0a0a2e; min-height: 100vh; color: white; }
+.pp-page { background: var(--navy); min-height: 100vh; }
 
-.header {
-  background: rgba(255,255,255,0.05);
-  padding: 16px 24px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.header-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo { font-size: 22px; font-weight: bold; color: #ff6b00; }
-
-.back-btn {
-  background: transparent;
-  color: rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.2);
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.product-container {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 0 24px;
+.pp-body {
+  max-width: 960px;
+  margin: 20px auto;
+  padding: 0 16px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 60px;
+  gap: 20px;
   align-items: start;
 }
 
-.product-image-section img {
-  width: 100%;
-  border-radius: 20px;
-  object-fit: cover;
-}
-
-.no-img {
-  background: rgba(255,255,255,0.08);
-  border-radius: 20px;
-  height: 400px;
+.pp-img {
+  background: var(--navy-card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 80px;
+  font-size: 64px;
 }
 
-.category-badge {
-  background: rgba(255,107,0,0.2);
-  color: #ff6b00;
+.pp-img img { width: 100%; height: 100%; object-fit: cover; }
+
+.pp-info {
+  background: var(--navy-card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pp-badge {
+  display: inline-block;
+  background: rgba(245,197,24,0.15);
+  color: var(--primary);
   padding: 4px 12px;
   border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(245,197,24,0.3);
+}
+
+.pp-name { font-size: 20px; font-weight: 700; line-height: 1.4; color: var(--white); }
+
+.pp-price { font-size: 32px; font-weight: 900; color: var(--primary); }
+.pp-price span { font-size: 14px; font-weight: 400; color: var(--text-muted); margin-right: 4px; }
+.pp-note { font-size: 12px; color: var(--text-muted); }
+
+.pp-desc { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+
+.pp-features { display: flex; flex-direction: column; gap: 8px; }
+
+.pp-feature {
+  background: var(--navy-light);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
   font-size: 13px;
-  display: inline-block;
-  margin-bottom: 16px;
+  color: var(--text-muted);
 }
 
-.product-details h1 { font-size: 28px; margin-bottom: 20px; line-height: 1.4; }
-
-.price-box { margin-bottom: 20px; }
-
-.price { font-size: 36px; font-weight: 900; color: #ff6b00; display: block; }
-
-.price-note { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 4px; display: block; }
-
-.description {
-  color: rgba(255,255,255,0.7);
-  font-size: 15px;
-  line-height: 1.7;
-  margin-bottom: 24px;
-}
-
-.info-boxes { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
-
-.info-box {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 12px 16px;
-  font-size: 14px;
-}
-
-.order-now-btn {
+.pp-btn {
   width: 100%;
-  background: #ff6b00;
-  color: white;
+  background: var(--primary);
+  color: var(--navy);
   border: none;
-  padding: 16px;
-  border-radius: 12px;
-  font-size: 18px;
-  font-weight: bold;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 900;
   cursor: pointer;
-  transition: background 0.2s;
+  font-family: var(--font);
+  transition: background 0.15s;
 }
 
-.order-now-btn:hover { background: #e55f00; }
+.pp-btn:hover { background: var(--primary-dark); }
+.pp-loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 16px; color: var(--text-muted); }
 
-.loading-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  font-size: 24px;
-  color: white;
-  background: #0a0a2e;
-}
+@media (max-width: 640px) { .pp-body { grid-template-columns: 1fr; } }
