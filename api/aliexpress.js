@@ -11,7 +11,7 @@ export default async function handler(req, res) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: 'abdllahibune@gmail.com',
-        password: 'CJ_PASSWORD_HERE'
+        password: 'Panda@2026CJ'
       })
     })
     const tokenData = await tokenRes.json()
