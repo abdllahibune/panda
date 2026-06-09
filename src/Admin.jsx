@@ -1,271 +1,259 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import './admin.css'
-const RAPIDAPI_KEY = 'e69ad28a7dmsh028e4d8f9c683e3p1e2692jsnca2e6e385579'
-
-async function fetchFromAliexpress(keyword) {
-  const url = `https://aliexpress-datahub.p.rapidapi.com/item_search_3?q=${encodeURIComponent(keyword)}&page=1`
-  const res = await fetch(url, {
-    headers: {
-      'x-rapidapi-host': 'aliexpress-datahub.p.rapidapi.com',
-      'x-rapidapi-key': RAPIDAPI_KEY
-    }
-  })
-  const data = await res.json()
-  return data?.result?.resultList || []
-}
 
 function Admin() {
-  const [page, setPage] = useState('orders')
-  const [orders, setOrders] = useState([])
+  const [tab, setTab] = useState('products')
   const [products, setProducts] = useState([])
-  const [settings, setSettings] = useState({ usd_to_mqr: 40, margin_percent: 15, shipping_cost: 500 })
-  const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState([])
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
 
-  // نموذج منتج جديد
-  const [newProduct, setNewProduct] = useState({
-    name: '', description: '', price_usd: '', image_url: '', source_url: '', category: ''
-  })
+  // Product form
+  const [pForm, setPForm] = useState({ name: '', price_mqr: '', shipping_cost: '', description: '', category_id: '', is_active: true })
+  const [pImage, setPImage] = useState(null)
+  const [editingProduct, setEditingProduct] = useState(null)
 
-  useEffect(() => {
-    if (page === 'orders') fetchOrders()
-    if (page === 'products') fetchProducts()
-    if (page === 'settings') fetchSettings()
-  }, [page])
+  // Category form
+  const [cForm, setCForm] = useState({ name: '' })
+  const [cImage, setCImage] = useState(null)
 
-  async function fetchOrders() {
-    setLoading(true)
-    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
-    setOrders(data || [])
-    setLoading(false)
+  useEffect(() => { fetchAll() }, [])
+
+  async function fetchAll() {
+    const [{ data: p }, { data: c }, { data: o }] = await Promise.all([
+      supabase.from('products').select('*, categories(name)').order('created_at', { ascending: false }),
+      supabase.from('categories').select('*').order('created_at'),
+      supabase.from('orders').select('*').order('created_at', { ascending: false })
+    ])
+    setProducts(p || [])
+    setCategories(c || [])
+    setOrders(o || [])
   }
 
-  async function fetchProducts() {
-    setLoading(true)
-    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
-    setProducts(data || [])
-    setLoading(false)
+  async function uploadImage(file, bucket) {
+    const ext = file.name.split('.').pop()
+    const path = `${Date.now()}.${ext}`
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+    if (error) return null
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path)
+    return publicUrl
   }
 
-  async function fetchSettings() {
-    const { data } = await supabase.from('settings').select('*').eq('id', 1).single()
-    if (data) setSettings(data)
+  async function saveProduct() {
+    if (!pForm.name || !pForm.price_mqr) return setMsg('اسم المنتج والسعر مطلوبان')
+    setLoading(true)
+    let image_url = editingProduct?.image_url || null
+    if (pImage) image_url = await uploadImage(pImage, 'product-images')
+    const payload = { ...pForm, price_mqr: parseInt(pForm.price_mqr), shipping_cost: parseInt(pForm.shipping_cost) || 0, image_url }
+    if (editingProduct) {
+      await supabase.from('products').update(payload).eq('id', editingProduct.id)
+      setMsg('تم تحديث المنتج')
+    } else {
+      await supabase.from('products').insert(payload)
+      setMsg('تم إضافة المنتج')
+    }
+    setPForm({ name: '', price_mqr: '', shipping_cost: '', description: '', category_id: '', is_active: true })
+    setPImage(null)
+    setEditingProduct(null)
+    setLoading(false)
+    fetchAll()
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm('حذف المنتج؟')) return
+    await supabase.from('products').delete().eq('id', id)
+    fetchAll()
+  }
+
+  function editProduct(p) {
+    setEditingProduct(p)
+    setPForm({ name: p.name, price_mqr: p.price_mqr, shipping_cost: p.shipping_cost || 0, description: p.description || '', category_id: p.category_id || '', is_active: p.is_active })
+    setTab('products')
+    window.scrollTo(0, 0)
+  }
+
+  async function saveCategory() {
+    if (!cForm.name) return setMsg('اسم القسم مطلوب')
+    setLoading(true)
+    let image_url = null
+    if (cImage) image_url = await uploadImage(cImage, 'categories')
+    await supabase.from('categories').insert({ ...cForm, image_url })
+    setCForm({ name: '' })
+    setCImage(null)
+    setMsg('تم إضافة القسم')
+    setLoading(false)
+    fetchAll()
+  }
+
+  async function deleteCategory(id) {
+    if (!confirm('حذف القسم؟')) return
+    await supabase.from('categories').delete().eq('id', id)
+    fetchAll()
   }
 
   async function updateOrderStatus(id, status) {
     await supabase.from('orders').update({ status }).eq('id', id)
-    fetchOrders()
+    fetchAll()
   }
 
-  async function addProduct() {
-    if (!newProduct.name || !newProduct.price_usd) return alert('الاسم والسعر مطلوبان')
-    const price_mqr = newProduct.price_usd * settings.usd_to_mqr * (1 + settings.margin_percent / 100) + settings.shipping_cost
-    await supabase.from('products').insert({ ...newProduct, price_usd: parseFloat(newProduct.price_usd), price_mqr: Math.round(price_mqr) })
-    setNewProduct({ name: '', description: '', price_usd: '', image_url: '', source_url: '', category: '' })
-    fetchProducts()
-  }
-
-  async function deleteProduct(id) {
-    if (!confirm('حذف هذا المنتج؟')) return
-    await supabase.from('products').delete().eq('id', id)
-    fetchProducts()
-  }
-
-  async function saveSettings() {
-    await supabase.from('settings').update(settings).eq('id', 1)
-    alert('تم حفظ الإعدادات ✅')
-  }
-  // AliExpress Scraper
-  const [scraperQuery, setScraperQuery] = useState('')
-  const [scraperResults, setScraperResults] = useState([])
-  const [scraperLoading, setScraperLoading] = useState(false)
-  const [importing, setImporting] = useState({})
-
-  async function searchAliexpress() {
-    if (!scraperQuery) return alert('اكتب كلمة بحث')
-    setScraperLoading(true)
-    setScraperResults([])
-    try {
-      const url = `https://aliexpress-datahub.p.rapidapi.com/item_search_3?q=${encodeURIComponent(scraperQuery)}&page=1`
-      const res = await fetch(url, {
-        headers: {
-          'x-rapidapi-host': 'aliexpress-datahub.p.rapidapi.com',
-          'x-rapidapi-key': RAPIDAPI_KEY
-        }
-      })
-      const data = await res.json()
-      const items = data?.result?.resultList || []
-      setScraperResults(items)
-    } catch(e) {
-      alert('خطأ في الاتصال')
-    }
-    setScraperLoading(false)
-  }
-
-  async function importProduct(item) {
-    const id = item.item?.itemId
-    setImporting(p => ({...p, [id]: true}))
-    const name = item.item?.title || 'منتج'
-    const image = item.item?.image || ''
-    const price_usd = parseFloat(item.item?.sku?.def?.promotionPrice || item.item?.sku?.def?.price || 0)
-    const usdRate = settings?.usd_to_mqr || 370
-    const price_mqr = Math.round(price_usd * usdRate * 1.3)
-    await supabase.from('products').insert({
-      name, image_url: image, price_usd, price_mqr,
-      description: '', category: 'عام', is_active: true
-    })
-    setImporting(p => ({...p, [id]: false}))
-    alert('تم إضافة المنتج')
-  }
-
-  const statusLabels = {
-    pending: '🟡 مدفوع',
-    ordered: '🔵 مطلوب',
-    shipping: '🚚 في الطريق',
-    delivered: '✅ وصل'
-  }
+  const STATUS = { pending: 'مدفوع', ordered: 'تم الطلب', shipping: 'في الطريق', delivered: 'وصل' }
+  const STATUS_COLORS = { pending: '#f59e0b', ordered: '#3b82f6', shipping: '#8b5cf6', delivered: '#10b981' }
 
   return (
-    <div className="admin" dir="rtl">
-      <header className="admin-header">
-        <h1>🐼 لوحة تحكم باندا</h1>
-        <nav>
-          <button className={page === 'orders' ? 'active' : ''} onClick={() => setPage('orders')}>📦 الطلبات</button>
-          <button className={page === 'products' ? 'active' : ''} onClick={() => setPage('products')}>🛍️ المنتجات</button>
-          <button className={page === 'settings' ? 'active' : ''} onClick={() => setPage('settings')}>⚙️ الإعدادات</button>
-          <button className={page === 'scraper' ? 'active' : ''} onClick={() => setPage('scraper')}>استيراد</button>
-        </nav>
+    <div className="adm" dir="rtl">
+      <header className="adm-header">
+        <div className="adm-logo">لوحة تحكم باندا</div>
+        <div className="adm-tabs">
+          {[['products','المنتجات'],['categories','الأقسام'],['orders','الطلبات']].map(([key,label]) => (
+            <button key={key} className={`adm-tab ${tab===key?'active':''}`} onClick={() => setTab(key)}>{label}</button>
+          ))}
+        </div>
+        <a href="/" className="adm-site-btn">الموقع</a>
       </header>
 
-      <main className="admin-main">
+      {msg && <div className="adm-msg" onClick={() => setMsg('')}>{msg} ✕</div>}
 
-        {/* ORDERS */}
-        {page === 'orders' && (
-          <div>
-            <h2>الطلبات ({orders.length})</h2>
-            {loading ? <p>جاري التحميل...</p> : orders.length === 0 ? <p>لا توجد طلبات بعد</p> : (
-              <div className="orders-list">
-                {orders.map(order => (
-                  <div className="order-card" key={order.id}>
-                    <div className="order-info">
-                      <strong>{order.customer_name}</strong>
-                      <span>{order.customer_phone}</span>
-                      <span>{order.customer_address}</span>
-                      <span>{order.product_name}</span>
-                      <span className="price">{order.total_price} أوقية</span>
-                      <span className="date">{new Date(order.created_at).toLocaleDateString('ar')}</span>
-                    </div>
-                    <div className="order-status">
-                      <span className="status-badge">{statusLabels[order.status]}</span>
-                      <select value={order.status} onChange={e => updateOrderStatus(order.id, e.target.value)}>
-                        <option value="pending">مدفوع</option>
-                        <option value="ordered">مطلوب</option>
-                        <option value="shipping">في الطريق</option>
-                        <option value="delivered">وصل</option>
-                      </select>
-                    </div>
-                  </div>
-                ))}
+      {/* PRODUCTS TAB */}
+      {tab === 'products' && (
+        <div className="adm-content">
+          <div className="adm-form-card">
+            <h2>{editingProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}</h2>
+            <div className="adm-grid-2">
+              <div className="adm-field">
+                <label>اسم المنتج *</label>
+                <input value={pForm.name} onChange={e => setPForm({...pForm, name: e.target.value})} placeholder="اسم المنتج" />
               </div>
-            )}
-          </div>
-        )}
-
-        {/* PRODUCTS */}
-        {page === 'products' && (
-          <div>
-            <h2>إضافة منتج جديد</h2>
-            <div className="add-product-form">
-              <input placeholder="اسم المنتج *" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
-              <input placeholder="السعر بالدولار *" type="number" value={newProduct.price_usd} onChange={e => setNewProduct({...newProduct, price_usd: e.target.value})} />
-              <input placeholder="رابط الصورة" value={newProduct.image_url} onChange={e => setNewProduct({...newProduct, image_url: e.target.value})} />
-              <input placeholder="رابط المنتج الأصلي" value={newProduct.source_url} onChange={e => setNewProduct({...newProduct, source_url: e.target.value})} />
-              <input placeholder="القسم" value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} />
-              <textarea placeholder="الوصف" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
-              <button className="add-btn" onClick={addProduct}>➕ إضافة المنتج</button>
+              <div className="adm-field">
+                <label>القسم</label>
+                <select value={pForm.category_id} onChange={e => setPForm({...pForm, category_id: e.target.value})}>
+                  <option value="">بدون قسم</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="adm-field">
+                <label>السعر (أوقية) *</label>
+                <input type="number" value={pForm.price_mqr} onChange={e => setPForm({...pForm, price_mqr: e.target.value})} placeholder="0" />
+              </div>
+              <div className="adm-field">
+                <label>سعر الشحن (أوقية)</label>
+                <input type="number" value={pForm.shipping_cost} onChange={e => setPForm({...pForm, shipping_cost: e.target.value})} placeholder="0" />
+              </div>
+              <div className="adm-field adm-span-2">
+                <label>الوصف</label>
+                <textarea value={pForm.description} onChange={e => setPForm({...pForm, description: e.target.value})} placeholder="وصف المنتج..." rows={3} />
+              </div>
+              <div className="adm-field">
+                <label>صورة المنتج</label>
+                <input type="file" accept="image/*" onChange={e => setPImage(e.target.files[0])} />
+                {pImage && <span className="adm-file-name">{pImage.name}</span>}
+                {editingProduct?.image_url && !pImage && <img src={editingProduct.image_url} className="adm-thumb" />}
+              </div>
+              <div className="adm-field adm-center">
+                <label>ظاهر في الموقع</label>
+                <input type="checkbox" checked={pForm.is_active} onChange={e => setPForm({...pForm, is_active: e.target.checked})} />
+              </div>
             </div>
-
-            <h2>المنتجات ({products.length})</h2>
-            {loading ? <p>جاري التحميل...</p> : (
-              <div className="products-list">
-                {products.map(p => (
-                  <div className="product-row" key={p.id}>
-                    {p.image_url && <img src={p.image_url} alt={p.name} />}
-                    <div>
-                      <strong>{p.name}</strong>
-                      <span>{p.price_mqr} أوقية</span>
-                    </div>
-                    <button className="delete-btn" onClick={() => deleteProduct(p.id)}>🗑️ حذف</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* SETTINGS */}
-        {page === 'settings' && (
-          <div className="settings-form">
-            <h2>إعدادات التسعير</h2>
-            <label>سعر الصرف (1 دولار = ؟ أوقية)
-              <input type="number" value={settings.usd_to_mqr} onChange={e => setSettings({...settings, usd_to_mqr: parseFloat(e.target.value)})} />
-            </label>
-            <label>نسبة الهامش (%)
-              <input type="number" value={settings.margin_percent} onChange={e => setSettings({...settings, margin_percent: parseFloat(e.target.value)})} />
-            </label>
-            <label>تكلفة الشحن (أوقية)
-              <input type="number" value={settings.shipping_cost} onChange={e => setSettings({...settings, shipping_cost: parseFloat(e.target.value)})} />
-            </label>
-            <button className="save-btn" onClick={saveSettings}>💾 حفظ الإعدادات</button>
-          </div>
-        )}
-
-        {page === 'scraper' &&
-          <div style={{padding:'20px'}}>
-            <h2 style={{marginBottom:'16px'}}>استيراد منتجات من AliExpress</h2>
-            <div style={{display:'flex', gap:'10px', marginBottom:'20px'}}>
-              <input
-                style={{flex:1, padding:'10px', borderRadius:'8px', border:'1px solid #ddd', fontSize:'14px', textAlign:'right'}}
-                placeholder="ابحث... مثال: shoes, watch, bag"
-                value={scraperQuery}
-                onChange={e => setScraperQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && searchAliexpress()}
-              />
-              <button
-                style={{background:'#ff6900', color:'white', border:'none', padding:'10px 20px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold'}}
-                onClick={searchAliexpress}
-              >
-                {scraperLoading ? '...' : 'بحث'}
+            <div className="adm-form-actions">
+              <button className="adm-btn-primary" onClick={saveProduct} disabled={loading}>
+                {loading ? 'جاري الحفظ...' : editingProduct ? 'تحديث المنتج' : 'إضافة المنتج'}
               </button>
-            </div>
-            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:'12px'}}>
-              {scraperResults.map(item => {
-                const id = item.item?.itemId
-                const name = item.item?.title || 'منتج'
-                const image = item.item?.image || ''
-                const price = item.item?.sku?.def?.promotionPrice || item.item?.sku?.def?.price || '0'
-                return (
-                  <div key={id} style={{background:'white', borderRadius:'8px', border:'1px solid #eee', overflow:'hidden'}}>
-                    <img src={image} alt={name} style={{width:'100%', aspectRatio:'1', objectFit:'cover'}} />
-                    <div style={{padding:'8px'}}>
-                      <p style={{fontSize:'12px', color:'#333', marginBottom:'6px', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden'}}>{name}</p>
-                      <p style={{fontSize:'14px', fontWeight:'900', color:'#ff6900', marginBottom:'8px'}}>${price}</p>
-                      <button
-                        style={{width:'100%', background: importing[id] ? '#ccc' : '#ff6900', color:'white', border:'none', padding:'7px', borderRadius:'5px', cursor:'pointer', fontSize:'12px', fontWeight:'bold'}}
-                        onClick={() => importProduct(item)}
-                        disabled={importing[id]}
-                      >
-                        {importing[id] ? 'جاري...' : 'اضف للموقع'}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
+              {editingProduct && <button className="adm-btn-secondary" onClick={() => { setEditingProduct(null); setPForm({ name:'',price_mqr:'',shipping_cost:'',description:'',category_id:'',is_active:true }) }}>إلغاء</button>}
             </div>
           </div>
-        }
 
-      </main>
+          <div className="adm-table-card">
+            <h2>المنتجات ({products.length})</h2>
+            <table className="adm-table">
+              <thead>
+                <tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>الشحن</th><th>القسم</th><th>ظاهر</th><th>إجراء</th></tr>
+              </thead>
+              <tbody>
+                {products.map(p => (
+                  <tr key={p.id}>
+                    <td>{p.image_url ? <img src={p.image_url} className="adm-thumb" /> : '—'}</td>
+                    <td>{p.name}</td>
+                    <td>{p.price_mqr} أوقية</td>
+                    <td>{p.shipping_cost || 0} أوقية</td>
+                    <td>{p.categories?.name || '—'}</td>
+                    <td><span className={`adm-badge ${p.is_active ? 'green' : 'gray'}`}>{p.is_active ? 'نعم' : 'لا'}</span></td>
+                    <td>
+                      <button className="adm-btn-edit" onClick={() => editProduct(p)}>تعديل</button>
+                      <button className="adm-btn-delete" onClick={() => deleteProduct(p.id)}>حذف</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* CATEGORIES TAB */}
+      {tab === 'categories' && (
+        <div className="adm-content">
+          <div className="adm-form-card">
+            <h2>إضافة قسم جديد</h2>
+            <div className="adm-grid-2">
+              <div className="adm-field">
+                <label>اسم القسم *</label>
+                <input value={cForm.name} onChange={e => setCForm({...cForm, name: e.target.value})} placeholder="مثال: ملابس، إلكترونيات..." />
+              </div>
+              <div className="adm-field">
+                <label>صورة القسم</label>
+                <input type="file" accept="image/*" onChange={e => setCImage(e.target.files[0])} />
+                {cImage && <span className="adm-file-name">{cImage.name}</span>}
+              </div>
+            </div>
+            <button className="adm-btn-primary" onClick={saveCategory} disabled={loading}>
+              {loading ? 'جاري الحفظ...' : 'إضافة القسم'}
+            </button>
+          </div>
+
+          <div className="adm-grid-categories">
+            {categories.map(c => (
+              <div className="adm-cat-card" key={c.id}>
+                {c.image_url ? <img src={c.image_url} /> : <div className="adm-cat-placeholder">لا توجد صورة</div>}
+                <div className="adm-cat-name">{c.name}</div>
+                <button className="adm-btn-delete" onClick={() => deleteCategory(c.id)}>حذف</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ORDERS TAB */}
+      {tab === 'orders' && (
+        <div className="adm-content">
+          <div className="adm-table-card">
+            <h2>الطلبات ({orders.length})</h2>
+            <table className="adm-table">
+              <thead>
+                <tr><th>رقم الطلب</th><th>العميل</th><th>الهاتف</th><th>المنتج</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th></tr>
+              </thead>
+              <tbody>
+                {orders.map(o => (
+                  <tr key={o.id}>
+                    <td>#{o.id.slice(0,8).toUpperCase()}</td>
+                    <td>{o.customer_name}</td>
+                    <td>{o.customer_phone}</td>
+                    <td>{o.product_name}</td>
+                    <td>{o.total_price} أوقية</td>
+                    <td>
+                      <select value={o.status} onChange={e => updateOrderStatus(o.id, e.target.value)}
+                        style={{ background: STATUS_COLORS[o.status], color: 'white', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}>
+                        {Object.entries(STATUS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </td>
+                    <td>{new Date(o.created_at).toLocaleDateString('ar')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
